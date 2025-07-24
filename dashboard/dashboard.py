@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 import sqlite3
 import logging
@@ -12,17 +13,20 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "storage", "techscope.db")
 
 # --- Template Engine ---
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
+
+# --- Mount static directory (if needed for CSS/JS) ---
+app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 
 # --- Logging ---
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
-# --- CORS (optional if accessing from frontend) ---
+# --- CORS for frontend integration ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Change in production
     allow_credentials=True,
-    allow_methods=["GET"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
