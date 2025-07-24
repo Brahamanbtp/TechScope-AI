@@ -1,0 +1,81 @@
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.templating import Jinja2Templates
+from fastapi.middleware.cors import CORSMiddleware
+import sqlite3
+import logging
+import os
+
+# --- Initialization ---
+app = FastAPI(title="TechScope Dashboard", version="1.0")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "storage", "techscope.db")
+
+# --- Template Engine ---
+templates = Jinja2Templates(directory="templates")
+
+# --- Logging ---
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+
+# --- CORS (optional if accessing from frontend) ---
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
+
+# --- Route: HTML Dashboard ---
+@app.get("/", response_class=HTMLResponse)
+def read_dashboard(request: Request):
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT id, summary, credibility, keywords, created_at FROM summaries ORDER BY created_at DESC")
+        rows = cursor.fetchall()
+        conn.close()
+
+        articles = [
+            {
+                "id": row[0],
+                "summary": row[1],
+                "credibility": row[2],
+                "keywords": row[3].split(','),
+                "created_at": row[4]
+            } for row in rows
+        ]
+
+        return templates.TemplateResponse("dashboard.html", {"request": request, "articles": articles})
+
+    except Exception as e:
+        logging.error(f"Error loading dashboard: {e}")
+        raise HTTPException(status_code=500, detail="Failed to load dashboard.")
+
+# --- Optional JSON API Endpoint ---
+@app.get("/api/records", response_class=JSONResponse)
+def get_records():
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT id, summary, credibility, keywords, created_at FROM summaries ORDER BY created_at DESC")
+        rows = cursor.fetchall()
+        conn.close()
+
+        articles = [
+            {
+                "id": row[0],
+                "summary": row[1],
+                "credibility": row[2],
+                "keywords": row[3].split(','),
+                "created_at": row[4]
+            } for row in rows
+        ]
+
+        return {"count": len(articles), "articles": articles}
+
+    except Exception as e:
+        logging.error(f"API error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve records.")
