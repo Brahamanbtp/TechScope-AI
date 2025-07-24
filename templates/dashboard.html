@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>TechScope Dashboard</title>
+  <style>
+    body { font-family: Arial; background: #f9f9f9; padding: 2rem; }
+    .card { background: white; padding: 1rem; margin-bottom: 1rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .keywords span { background: #eee; padding: 0.3rem 0.6rem; border-radius: 5px; margin-right: 5px; font-size: 0.85rem; }
+    h3 { margin-bottom: 0.5rem; }
+  </style>
+</head>
+<body>
+  <h1>📊 TechScope Dashboard</h1>
+  {% for article in articles %}
+    <div class="card">
+      <h3>📝 Summary</h3>
+      <p>{{ article.summary }}</p>
+      <p><strong>Credibility Score:</strong> {{ article.credibility }}</p>
+      <p class="keywords"><strong>Keywords:</strong>
+        {% for word in article.keywords %}
+          <span>{{ word }}</span>
+        {% endfor %}
+      </p>
+      <p><small><strong>Created:</strong> {{ article.created_at }}</small></p>
+    </div>
+  {% endfor %}
+</body>
+</html>
