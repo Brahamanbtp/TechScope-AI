@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+jinja2
+pydantic
+scikit-learn
+nltk
+beautifulsoup4
+python-multipart
+numpy
+spacy
+sumy
+textblob
+sqlite-utils
+aiofiles
+python-dotenv
+tqdm
+httpx
