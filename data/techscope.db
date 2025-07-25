@@ -1,0 +1,12 @@
+cursor = conn.cursor()
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS articles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT,
+    url TEXT,
+    summary TEXT,
+    source TEXT,
+    date_published TEXT
+)
+""")
+conn.commit()
