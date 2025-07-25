@@ -9,22 +9,27 @@ import os
 
 # --- Initialization ---
 app = FastAPI(title="TechScope Dashboard", version="1.0")
+
+# --- Path Setup ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "storage", "techscope.db")
-
-# --- Template Engine ---
-templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
-
-# --- Mount static directory (if needed for CSS/JS) ---
-app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
+TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+DB_PATH = os.path.abspath(os.path.join(BASE_DIR, "..", "data", "techscope.db"))
 
 # --- Logging ---
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
-# --- CORS for frontend integration ---
+# --- Template Engine ---
+templates = Jinja2Templates(directory=TEMPLATES_DIR)
+
+# --- Static Files (for CSS/JS) ---
+if os.path.exists(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+# --- CORS for Frontend Integration ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Change in production
+    allow_origins=["*"],  # Update this in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -48,7 +53,8 @@ def read_dashboard(request: Request):
                 "credibility": row[2],
                 "keywords": row[3].split(','),
                 "created_at": row[4]
-            } for row in rows
+            }
+            for row in rows
         ]
 
         return templates.TemplateResponse("dashboard.html", {"request": request, "articles": articles})
@@ -75,7 +81,8 @@ def get_records():
                 "credibility": row[2],
                 "keywords": row[3].split(','),
                 "created_at": row[4]
-            } for row in rows
+            }
+            for row in rows
         ]
 
         return {"count": len(articles), "articles": articles}
