@@ -1,4 +1,10 @@
+import sqlite3
+from datetime import datetime
+
+conn = sqlite3.connect("techscope.db")
 cursor = conn.cursor()
+
+# Create table if not exists (your existing schema)
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS articles (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -9,4 +15,22 @@ CREATE TABLE IF NOT EXISTS articles (
     date_published TEXT
 )
 """)
+
+# Insert sample articles
+sample_data = [
+    ("AI model improves coding efficiency", "https://example.com/ai-coding", 
+     "An AI model has been developed to improve coding efficiency.", 
+     "TechNews", datetime.now().isoformat()),
+    
+    ("New cloud service reduces latency", "https://example.com/cloud-latency", 
+     "A new cloud service promises to reduce latency in distributed apps.", 
+     "CloudDaily", datetime.now().isoformat())
+]
+
+cursor.executemany("""
+INSERT INTO articles (title, url, summary, source, date_published) 
+VALUES (?, ?, ?, ?, ?)
+""", sample_data)
+
 conn.commit()
+conn.close()
