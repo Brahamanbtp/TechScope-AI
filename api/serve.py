@@ -27,7 +27,8 @@ from storage.feed_repo import create_feed, delete_feed, get_feed, list_feed_heal
 from storage.job_repo import get_job
 from utils.rate_limit import enforce_analyze_rate_limit
 from utils.url_fetcher import FetchError, fetch_article
-from api.auth import verify_admin, verify_api_key
+from api.auth import verify_admin, verify_api_key, verify_user
+from storage.article_actions import list_bookmarks, mark_read, set_bookmark
 from utils.scheduler import ingest_feeds_once
 from utils.url_fetcher import validate_public_url
 from utils.job_runner import submit_ingest_job
@@ -35,6 +36,7 @@ from storage.user_repo import authenticate_user, count_users, create_session, cr
 from storage.cluster_repo import list_clusters
 from utils.clustering import cluster_articles
 from utils.evidence import extract_evidence
+from utils.search import semantic_search
 
 # --------------------------
 # FastAPI app
@@ -279,6 +281,29 @@ def get_article_detail(article_id: int):
     return article
 
 
+@app.get("/api/v1/me/bookmarks")
+def get_bookmarks(user=Depends(verify_user)):
+    return {"articles": list_bookmarks(user["id"])}
+
+
+@app.post("/api/v1/articles/{article_id}/bookmark")
+def bookmark_article(article_id: int, user=Depends(verify_user)):
+    set_bookmark(user["id"], article_id, True)
+    return {"article_id": article_id, "bookmarked": True}
+
+
+@app.delete("/api/v1/articles/{article_id}/bookmark")
+def remove_bookmark(article_id: int, user=Depends(verify_user)):
+    set_bookmark(user["id"], article_id, False)
+    return {"article_id": article_id, "bookmarked": False}
+
+
+@app.post("/api/v1/articles/{article_id}/read")
+def mark_article_read(article_id: int, user=Depends(verify_user)):
+    mark_read(user["id"], article_id)
+    return {"article_id": article_id, "read": True}
+
+
 @app.post("/api/v1/clusters/rebuild", dependencies=[Depends(verify_admin)])
 def rebuild_clusters():
     return cluster_articles()
@@ -287,6 +312,11 @@ def rebuild_clusters():
 @app.get("/api/v1/clusters", dependencies=[Depends(verify_api_key)])
 def get_clusters():
     return {"clusters": list_clusters()}
+
+
+@app.get("/api/v1/search", dependencies=[Depends(verify_api_key)])
+def search_articles(q: str = Query(..., min_length=2, max_length=200), limit: int = Query(default=20, ge=1, le=100)):
+    return {"query": q, "results": semantic_search(q, limit)}
 
 # --------------------------
 # Run server (dev mode)

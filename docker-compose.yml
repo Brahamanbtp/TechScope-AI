@@ -33,6 +33,19 @@ services:
       postgres:
         condition: service_healthy
 
+  worker:
+    build: .
+    command: python worker.py
+    environment:
+      TECHSCOPE_API_KEY: ${TECHSCOPE_API_KEY:?Set TECHSCOPE_API_KEY in .env}
+      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgresql://techscope:techscope@postgres:5432/techscope
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
   postgres:
     image: postgres:16-alpine
     environment:

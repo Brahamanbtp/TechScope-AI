@@ -65,8 +65,13 @@ Endpoints:
 | POST | `/api/v1/ingest` | Queue feed ingestion; requires `x-api-key` |
 | GET | `/api/v1/jobs/{job_id}` | Read ingestion job status; requires `x-api-key` |
 | GET | `/api/v1/articles/{id}` | Retrieve one article; requires `x-api-key` |
+| GET | `/api/v1/me/bookmarks` | List current user bookmarks |
+| POST | `/api/v1/articles/{id}/bookmark` | Bookmark an article |
+| DELETE | `/api/v1/articles/{id}/bookmark` | Remove a bookmark |
+| POST | `/api/v1/articles/{id}/read` | Mark an article read |
 | GET | `/api/v1/clusters` | List story clusters; requires `x-api-key` |
 | POST | `/api/v1/clusters/rebuild` | Rebuild TF-IDF story clusters; admin only |
+| GET | `/api/v1/search` | Ranked TF-IDF semantic article search |
 
 Analysis requests must contain between 100 and 100,000 characters in `text`.
 URL analysis accepts only public HTTP(S) URLs, does not follow redirects, limits

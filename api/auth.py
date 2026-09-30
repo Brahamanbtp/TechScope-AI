@@ -38,3 +38,9 @@ def verify_admin(user=Depends(verify_api_key)):
     if user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Administrator access required")
     return user
+
+
+def verify_user(user=Depends(verify_api_key)):
+    if not user.get("id"):
+        raise HTTPException(status_code=401, detail="A bearer user session is required")
+    return user

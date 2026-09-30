@@ -18,7 +18,9 @@ from utils.evaluate_quality import evaluate
 from storage import feed_repo
 from storage import job_repo
 from storage import cluster_repo
+from storage import article_actions
 from utils.evidence import extract_evidence
+from utils.search import semantic_search
 from sources import arstechnica, techcrunch, theverge, wired
 
 
@@ -80,6 +82,21 @@ def source_article_test(module, html, expected_title, expected_author):
 
 
 class Phase2Tests(unittest.TestCase):
+    def test_semantic_search_empty_store(self):
+        with tempfile.NamedTemporaryFile(suffix=".db") as database:
+            with patch.object(schema, "DB_PATH", database.name), patch.object(cluster_repo, "DB_PATH", database.name):
+                self.assertEqual(semantic_search("technology"), [])
+    def test_user_article_actions_are_scoped(self):
+        with tempfile.NamedTemporaryFile(suffix=".db") as database:
+            with patch.object(schema, "DB_PATH", database.name), patch.object(article_actions, "DB_PATH", database.name):
+                schema.init_db()
+                with sqlite3.connect(database.name) as connection:
+                    connection.execute("INSERT INTO users (username, password_hash, created_at) VALUES (?, ?, ?)", ("u", "hash", "now"))
+                    connection.execute("INSERT INTO articles (url, created_at, updated_at) VALUES (?, ?, ?)", ("https://example.com", "now", "now"))
+                    connection.commit()
+                article_actions.set_bookmark(1, 1, True)
+                self.assertEqual(len(article_actions.list_bookmarks(1)), 1)
+                article_actions.mark_read(1, 1)
     def test_evidence_extraction_is_explicit(self):
         evidence = extract_evidence("According to the report at https://example.com/report, results improved.")
         self.assertEqual(evidence[0]["type"], "attribution")

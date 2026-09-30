@@ -135,6 +135,12 @@ def init_db() -> None:
             """
         )
         connection.execute(
+            "CREATE TABLE IF NOT EXISTS bookmarks (user_id INTEGER NOT NULL, article_id INTEGER NOT NULL, created_at TEXT NOT NULL, PRIMARY KEY (user_id, article_id))"
+        )
+        connection.execute(
+            "CREATE TABLE IF NOT EXISTS read_states (user_id INTEGER NOT NULL, article_id INTEGER NOT NULL, read_at TEXT NOT NULL, PRIMARY KEY (user_id, article_id))"
+        )
+        connection.execute(
             "INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (1, ?)",
             (_utc_now(),),
         )
@@ -195,6 +201,8 @@ def _init_postgres() -> None:
                 expires_at TEXT NOT NULL, created_at TEXT NOT NULL
             )
         """)
+        execute(connection, "CREATE TABLE IF NOT EXISTS bookmarks (user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE, article_id BIGINT NOT NULL REFERENCES articles(id) ON DELETE CASCADE, created_at TEXT NOT NULL, PRIMARY KEY (user_id, article_id))")
+        execute(connection, "CREATE TABLE IF NOT EXISTS read_states (user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE, article_id BIGINT NOT NULL REFERENCES articles(id) ON DELETE CASCADE, read_at TEXT NOT NULL, PRIMARY KEY (user_id, article_id))")
         execute(connection, "INSERT INTO schema_migrations (version, applied_at) VALUES (1, %s) ON CONFLICT (version) DO NOTHING", (_utc_now(),))
 
 
