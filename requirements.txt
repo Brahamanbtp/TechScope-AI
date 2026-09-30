@@ -16,3 +16,14 @@ python-dotenv
 tqdm
 httpx
 streamlit
+requests
+feedparser
+typer
+openai
+transformers
+torch
+sentence-transformers
+keybert
+rake-nltk
+pymongo
+pytest

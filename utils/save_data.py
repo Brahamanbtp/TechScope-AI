@@ -1,15 +1,14 @@
 import sqlite3
 from typing import List, Dict
-
-DB_PATH = "techscope.db"  # path to your SQLite database
+from storage.schema import DB_PATH, init_db
 
 def load_articles() -> List[Dict]:
     """
     Load all articles from the 'articles' table and return as a list of dicts.
     Each dict has keys: id, title, url, summary, source, date_published
     """
-    try:
-        conn = sqlite3.connect(DB_PATH)
+    init_db()
+    with sqlite3.connect(DB_PATH) as conn:
         conn.row_factory = sqlite3.Row  # Enable dict-like access
         cursor = conn.cursor()
 
@@ -18,9 +17,11 @@ def load_articles() -> List[Dict]:
 
         articles = [dict(row) for row in rows]
 
-        conn.close()
         return articles
 
-    except Exception as e:
-        print(f"Error loading articles: {e}")
-        return []
+
+def save_articles(articles: List[Dict]) -> None:
+    from storage.schema import write_article
+
+    for article in articles:
+        write_article(article)

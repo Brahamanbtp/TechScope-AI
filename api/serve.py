@@ -1,8 +1,8 @@
 import sys
 import os
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import uvicorn
 
 # --------------------------
@@ -16,10 +16,13 @@ if project_root not in sys.path:
 # Import utils
 # --------------------------
 from utils.summarizer import summarize_article
-from utils.credibility import score_credibility
+from utils.credibility import assess_content_quality
 from utils.keywords import extract_keywords
 from utils.save_data import load_articles
-from utils.auth import verify_api_key
+from storage.schema import write_article
+from utils.rate_limit import enforce_analyze_rate_limit
+from utils.url_fetcher import FetchError, fetch_article
+from api.auth import verify_api_key
 
 # --------------------------
 # FastAPI app
@@ -33,8 +36,8 @@ app = FastAPI(
 # CORS configuration for frontend integration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Change to specific domains in production
-    allow_credentials=True,
+    allow_origins=os.getenv("TECHSCOPE_CORS_ORIGINS", "http://localhost:8501").split(","),
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -43,7 +46,11 @@ app.add_middleware(
 # Pydantic input model
 # --------------------------
 class ArticleInput(BaseModel):
-    text: str
+    text: str = Field(..., min_length=100, max_length=100_000)
+
+
+class UrlInput(BaseModel):
+    url: str = Field(..., min_length=8, max_length=2_000)
 
 # --------------------------
 # Routes
@@ -53,7 +60,7 @@ class ArticleInput(BaseModel):
 def root():
     return {"message": "🚀 Welcome to TechScope AI - FastAPI Backend"}
 
-@app.get("/articles")
+@app.get("/articles", dependencies=[Depends(verify_api_key)])
 def get_articles():
     """Load stored articles"""
     try:
@@ -75,8 +82,14 @@ def summarize_text(input: ArticleInput):
 def get_credibility(input: ArticleInput):
     """Get credibility score (API key protected)"""
     try:
-        score = score_credibility(input.text)
-        return {"credibility_score": score}
+        assessment = assess_content_quality(input.text)
+        return {
+            "credibility_score": assessment["score"],
+            "quality_score": assessment["score"],
+            "quality_label": assessment["label"],
+            "quality_signals": assessment["signals"],
+            "analysis_version": assessment["method"],
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -88,6 +101,34 @@ def get_keywords(input: ArticleInput):
         return {"keywords": keywords}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/analyze", dependencies=[Depends(verify_api_key), Depends(enforce_analyze_rate_limit)])
+def analyze_url(input: UrlInput):
+    try:
+        article = fetch_article(input.url)
+        content = article["content"]
+        quality = assess_content_quality(content)
+        article["summary"] = summarize_article(content)
+        article["keywords"] = extract_keywords(content)
+        article["credibility"] = quality["score"]
+        article["quality_score"] = quality["score"]
+        article["quality_explanation"] = quality["signals"]
+        article["analysis_version"] = quality["method"]
+        write_article(article)
+        return {
+            "url": article["url"],
+            "title": article["title"],
+            "source": article["source"],
+            "summary": article["summary"],
+            "keywords": article["keywords"],
+            "credibility": article["credibility"],
+            "quality": quality,
+        }
+    except FetchError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Article analysis failed") from exc
 
 # --------------------------
 # Run server (dev mode)

@@ -5,6 +5,7 @@ __pycache__/
 .env
 venv/
 storage/techscope.db
+data/techscope.db.invalid-*
 
 # Editor/IDE
 .vscode/

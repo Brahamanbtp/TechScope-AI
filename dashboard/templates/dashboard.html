@@ -16,7 +16,15 @@
     <div class="card">
       <h3>📝 Summary</h3>
       <p>{{ article.summary }}</p>
-      <p><strong>Credibility Score:</strong> {{ article.credibility }}</p>
+      <p><strong>Content Quality Score:</strong> {{ article.credibility }}</p>
+      {% if article.quality_signals %}
+        <p><strong>Signals:</strong></p>
+        <ul>
+          {% for signal in article.quality_signals %}
+            <li>{{ signal }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
       <p class="keywords"><strong>Keywords:</strong>
         {% for word in article.keywords %}
           <span>{{ word }}</span>

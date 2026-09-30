@@ -7,17 +7,24 @@ try:
     from keybert import KeyBERT
     from rake_nltk import Rake
 except ImportError:
-    raise ImportError("Please install required packages: `pip install keybert rake-nltk`")
+    KeyBERT = None
+    Rake = None
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("keywords")
 
 # === MODEL SETUP ===
-try:
-    kw_model = KeyBERT(model="all-MiniLM-L6-v2")
-except Exception as e:
-    logger.warning(f"KeyBERT model load failed: {e}")
-    kw_model = None
+kw_model = None
+
+
+def _get_keybert_model():
+    global kw_model
+    if kw_model is None and KeyBERT is not None:
+        try:
+            kw_model = KeyBERT(model="all-MiniLM-L6-v2")
+        except Exception as e:
+            logger.warning(f"KeyBERT model load failed: {e}")
+    return kw_model
 
 def clean_for_keywords(text: str) -> str:
     """Preprocess text for keyword extraction"""
@@ -28,10 +35,11 @@ def clean_for_keywords(text: str) -> str:
 
 def extract_with_keybert(text: str, top_n: int = 10) -> List[str]:
     """Extract keywords using KeyBERT"""
-    if not kw_model:
-        raise RuntimeError("KeyBERT model not initialized.")
+    model = _get_keybert_model()
+    if not model:
+        return []
     try:
-        keywords = kw_model.extract_keywords(text, top_n=top_n, stop_words="english")
+        keywords = model.extract_keywords(text, top_n=top_n, stop_words="english")
         return [kw[0] for kw in keywords]
     except Exception as e:
         logger.warning(f"KeyBERT extraction failed: {e}")
@@ -40,6 +48,8 @@ def extract_with_keybert(text: str, top_n: int = 10) -> List[str]:
 def extract_with_rake(text: str, top_n: int = 10) -> List[str]:
     """Fallback method using RAKE"""
     try:
+        if Rake is None:
+            return []
         rake = Rake()
         rake.extract_keywords_from_text(text)
         return rake.get_ranked_phrases()[:top_n]
@@ -68,5 +78,12 @@ def extract_keywords(text: str, top_n: int = 10) -> List[str]:
     keywords = extract_with_keybert(cleaned_text, top_n)
     if not keywords:
         keywords = extract_with_rake(cleaned_text, top_n)
+
+    if not keywords:
+        words = [word for word in cleaned_text.split() if word not in ENGLISH_STOP_WORDS]
+        frequencies = {}
+        for word in words:
+            frequencies[word] = frequencies.get(word, 0) + 1
+        keywords = [word for word, _ in sorted(frequencies.items(), key=lambda item: (-item[1], item[0]))[:top_n]]
 
     return post_process_keywords(keywords)

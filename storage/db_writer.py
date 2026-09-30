@@ -1,19 +1,13 @@
-import sqlite3
-from datetime import datetime
+from storage.schema import write_article
 
 def init_db():
-    conn = sqlite3.connect("articles.db")
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS articles
-                 (summary TEXT, credibility REAL, keywords TEXT, timestamp TEXT)''')
-    conn.commit()
-    conn.close()
+    from storage.schema import init_db as initialize_database
+    initialize_database()
 
 def write_to_db(summary, credibility, keywords):
-    timestamp = datetime.utcnow().isoformat()
-    conn = sqlite3.connect("articles.db")
-    c = conn.cursor()
-    c.execute("INSERT INTO articles VALUES (?, ?, ?, ?)",
-              (summary, credibility, ",".join(keywords), timestamp))
-    conn.commit()
-    conn.close()
+    write_article({
+        "url": f"local:{hash((summary, credibility, tuple(keywords)))}",
+        "summary": summary,
+        "credibility": credibility,
+        "keywords": keywords,
+    })

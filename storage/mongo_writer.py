@@ -1,11 +1,19 @@
-from pymongo import MongoClient
 from datetime import datetime
 
-client = MongoClient("mongodb://localhost:27017/")
-db = client.techscope
-collection = db.articles
+try:
+    from pymongo import MongoClient
+except ImportError:
+    MongoClient = None
+
+
+collection = None
+if MongoClient is not None:
+    client = MongoClient("mongodb://localhost:27017/", serverSelectionTimeoutMS=2000)
+    collection = client.techscope.articles
 
 def write_to_mongo(data):
+    if collection is None:
+        raise RuntimeError("pymongo is not installed")
     data["timestamp"] = datetime.utcnow().isoformat()
     try:
         collection.insert_one(data)

@@ -1,11 +1,21 @@
-from fastapi import Header, HTTPException, Depends
+import os
 
-# Define a basic API key (in production, store securely)
-API_KEY = "your-secure-api-key"
+from fastapi import Header, HTTPException
 
-def verify_api_key(x_api_key: str = Header(...)):
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+
+API_KEY = os.getenv("TECHSCOPE_API_KEY")
+
+def verify_api_key(x_api_key: str | None = Header(default=None)):
     """
     Verifies that the API key sent in the header is valid.
     """
+    if not API_KEY:
+        raise HTTPException(status_code=503, detail="API authentication is not configured")
     if x_api_key != API_KEY:
-        raise HTTPException(status_code=403, detail=" Invalid or missing API Key")
+        raise HTTPException(status_code=403, detail="Invalid or missing API key")

@@ -1,10 +1,14 @@
 import time
-import feedparser
 from typing import List, Dict
 from utils.clean_text import clean_article_text
 from utils.detect_duplicates import detect_similar_articles
 from utils.save_data import save_articles
 import logging
+
+try:
+    import feedparser
+except ImportError:
+    feedparser = None
 
 logging.basicConfig(level=logging.INFO)
 
@@ -19,6 +23,8 @@ TECH_FEEDS = [
 
 def fetch_articles(feed_urls: List[str]) -> List[Dict]:
     """Fetch and clean articles from a list of RSS feeds."""
+    if feedparser is None:
+        raise RuntimeError("feedparser is required to fetch RSS feeds")
     articles = []
 
     for url in feed_urls:

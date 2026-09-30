@@ -3,9 +3,12 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-import sqlite3
 import logging
 import os
+import sqlite3
+import json
+
+from storage.schema import DB_PATH, init_db
 
 # --- Initialization ---
 app = FastAPI(title="TechScope Dashboard", version="1.0")
@@ -14,7 +17,7 @@ app = FastAPI(title="TechScope Dashboard", version="1.0")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 STATIC_DIR = os.path.join(BASE_DIR, "static")
-DB_PATH = os.path.abspath(os.path.join(BASE_DIR, "..", "data", "techscope.db"))
+init_db()
 
 # --- Logging ---
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -29,8 +32,8 @@ if os.path.exists(STATIC_DIR):
 # --- CORS for Frontend Integration ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Update this in production
-    allow_credentials=True,
+    allow_origins=os.getenv("TECHSCOPE_CORS_ORIGINS", "http://localhost:8501").split(","),
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -42,7 +45,7 @@ def read_dashboard(request: Request):
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
 
-        cursor.execute("SELECT id, summary, credibility, keywords, created_at FROM summaries ORDER BY created_at DESC")
+        cursor.execute("SELECT id, summary, COALESCE(quality_score, credibility), keywords, quality_explanation, analysis_version, created_at FROM articles ORDER BY created_at DESC")
         rows = cursor.fetchall()
         conn.close()
 
@@ -52,7 +55,9 @@ def read_dashboard(request: Request):
                 "summary": row[1],
                 "credibility": row[2],
                 "keywords": row[3].split(','),
-                "created_at": row[4]
+                "quality_signals": json.loads(row[4]) if row[4] else [],
+                "analysis_version": row[5],
+                "created_at": row[6]
             }
             for row in rows
         ]
@@ -70,7 +75,7 @@ def get_records():
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
 
-        cursor.execute("SELECT id, summary, credibility, keywords, created_at FROM summaries ORDER BY created_at DESC")
+        cursor.execute("SELECT id, summary, COALESCE(quality_score, credibility), keywords, quality_explanation, analysis_version, created_at FROM articles ORDER BY created_at DESC")
         rows = cursor.fetchall()
         conn.close()
 
@@ -80,7 +85,9 @@ def get_records():
                 "summary": row[1],
                 "credibility": row[2],
                 "keywords": row[3].split(','),
-                "created_at": row[4]
+                "quality_signals": json.loads(row[4]) if row[4] else [],
+                "analysis_version": row[5],
+                "created_at": row[6]
             }
             for row in rows
         ]
