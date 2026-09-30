@@ -1,8 +1,10 @@
+import asyncio
 import sqlite3
 import tempfile
 import unittest
 from unittest.mock import patch
 
+import httpx
 from pydantic import ValidationError
 
 from api.serve import ArticleInput, UrlInput, app
@@ -11,6 +13,13 @@ from utils.rate_limit import RateLimiter
 from utils.credibility import assess_content_quality
 from utils.save_data import load_articles
 from utils.url_fetcher import FetchError, fetch_article, validate_public_url
+from utils.feed_ingest import fetch_feed
+from utils.evaluate_quality import evaluate
+from storage import feed_repo
+from storage import job_repo
+from storage import cluster_repo
+from utils.evidence import extract_evidence
+from sources import arstechnica, techcrunch, theverge, wired
 
 
 class FakeResponse:
@@ -45,7 +54,138 @@ class FakeClient:
         return FakeResponse()
 
 
+class FeedResponse:
+    def __init__(self, status_code, text, headers=None):
+        self.status_code = status_code
+        self.text = text
+        self.headers = headers or {}
+
+    def raise_for_status(self):
+        return None
+
+
+class SourceResponse:
+    def __init__(self, text):
+        self.text = text
+
+    def raise_for_status(self):
+        return None
+
+
+def source_article_test(module, html, expected_title, expected_author):
+    with patch.object(module, "is_scraping_allowed", return_value=True):
+        with patch.object(module.requests, "get", return_value=SourceResponse(html)):
+            article = module.parse_article("https://example.com/article")
+    return article, expected_title, expected_author
+
+
 class Phase2Tests(unittest.TestCase):
+    def test_evidence_extraction_is_explicit(self):
+        evidence = extract_evidence("According to the report at https://example.com/report, results improved.")
+        self.assertEqual(evidence[0]["type"], "attribution")
+        self.assertEqual(evidence[0]["urls"], ["https://example.com/report,"])
+
+    def test_clustering_empty_store(self):
+        with tempfile.NamedTemporaryFile(suffix=".db") as database:
+            with patch.object(schema, "DB_PATH", database.name), patch.object(cluster_repo, "DB_PATH", database.name):
+                from utils.clustering import cluster_articles
+                self.assertEqual(cluster_articles()["clusters"], 0)
+
+    def test_feed_health_view_includes_fetch_state(self):
+        with tempfile.NamedTemporaryFile(suffix=".db") as database:
+            with patch.object(schema, "DB_PATH", database.name), patch.object(feed_repo, "DB_PATH", database.name):
+                feed_repo.create_feed("https://example.com/feed.xml", "Example", 15)
+                schema.save_feed_state("https://example.com/feed.xml", "etag-1", "today", None)
+                health = feed_repo.list_feed_health()
+        self.assertEqual(health[0]["last_error"], None)
+        self.assertEqual(health[0]["etag"], "etag-1")
+
+    def test_job_lifecycle(self):
+        with tempfile.NamedTemporaryFile(suffix=".db") as database:
+            with patch.object(schema, "DB_PATH", database.name), patch.object(job_repo, "DB_PATH", database.name):
+                job_repo.create_job("job-1", "feed_ingest")
+                job_repo.update_job("job-1", "running")
+                job_repo.update_job("job-1", "succeeded", {"saved": 3})
+                job = job_repo.get_job("job-1")
+        self.assertEqual(job["status"], "succeeded")
+        self.assertEqual(job["result"], {"saved": 3})
+
+    def test_feed_registry_lifecycle(self):
+        with tempfile.NamedTemporaryFile(suffix=".db") as database:
+            with patch.object(schema, "DB_PATH", database.name), patch.object(feed_repo, "DB_PATH", database.name):
+                created = feed_repo.create_feed("https://example.com/feed.xml", "Example", 15)
+                self.assertEqual(created["name"], "Example")
+                self.assertEqual(len(feed_repo.list_feeds()), 1)
+                self.assertTrue(feed_repo.delete_feed(created["id"]))
+                self.assertEqual(feed_repo.list_feeds(), [])
+
+    def test_versioned_control_plane_routes_exist(self):
+        paths = {route.path for route in app.routes}
+        self.assertTrue({
+            "/healthz",
+            "/api/v1/feeds",
+            "/api/v1/ingest",
+            "/api/v1/jobs/{job_id}",
+            "/api/v1/articles/{article_id}",
+        } <= paths)
+
+    def test_quality_evaluation_dataset_is_labelled(self):
+        result = evaluate()
+        self.assertEqual(result["examples"], 8)
+        self.assertEqual(result["status"], "experimental")
+        self.assertGreaterEqual(result["accuracy"], 0)
+    def test_conditional_feed_request_uses_validators(self):
+        feed = '<rss><channel><item><title>Story</title><link>https://example.com/story</link><description>Feed content</description></item></channel></rss>'
+        responses = [
+            FeedResponse(200, feed, {"etag": "v1", "last-modified": "today"}),
+            FeedResponse(304, "", {}),
+        ]
+        with patch("utils.feed_ingest.httpx.get", side_effect=responses):
+            with patch("utils.feed_ingest.get_feed_state", side_effect=[None, {"etag": "v1", "last_modified": "today"}]):
+                with patch("utils.feed_ingest.save_feed_state") as save_state:
+                    first = fetch_feed("https://example.com/feed.xml")
+                    second = fetch_feed("https://example.com/feed.xml")
+        self.assertTrue(first.modified)
+        self.assertEqual(len(first.articles), 1)
+        self.assertFalse(second.modified)
+        self.assertEqual(second.articles, [])
+        self.assertEqual(save_state.call_count, 2)
+
+    def test_source_specific_parsers(self):
+        fixtures = [
+            (arstechnica, '<html><h1>Ars title</h1><a rel="author">Ada</a><time datetime="2026-01-01"/><div class="article-content"><p>Ars article content.</p></div></html>', "Ars title", "Ada"),
+            (techcrunch, '<html><h1>TC title</h1><a rel="author">Ben</a><time datetime="2026-01-01"/><div class="article-content"><p>TechCrunch article content.</p></div></html>', "TC title", "Ben"),
+            (theverge, '<html><h1>Verge title</h1><span class="byline__name">Cy</span><time datetime="2026-01-01"/><div class="duet--article--article-body-components-container"><p>Verge article content.</p></div></html>', "Verge title", "Cy"),
+            (wired, '<html><h1>Wired title</h1><a class="byline-component__link">Di</a><time datetime="2026-01-01"/><article><p>Wired article content.</p></article></html>', "Wired title", "Di"),
+        ]
+        for module, html, title, author in fixtures:
+            with self.subTest(module=module.__name__):
+                article, expected_title, expected_author = source_article_test(module, html, title, author)
+                self.assertEqual(article["title"], expected_title)
+                self.assertEqual(article["author"], expected_author)
+                self.assertIn("article content", article["content"])
+
+    def test_article_reads_are_paginated(self):
+        with tempfile.NamedTemporaryFile(suffix=".db") as database:
+            with patch.object(schema, "DB_PATH", database.name):
+                with patch("utils.save_data.DB_PATH", database.name):
+                    schema.init_db()
+                    for index in range(3):
+                        schema.write_article({"url": f"https://example.com/{index}", "title": str(index)})
+                    articles = load_articles(limit=1, offset=1)
+        self.assertEqual(len(articles), 1)
+
+    def test_security_headers_are_present(self):
+        async def request_root():
+            transport = httpx.ASGITransport(app=app)
+            async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+                return await client.get("/")
+
+        response = asyncio.run(request_root())
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["x-content-type-options"], "nosniff")
+        self.assertEqual(response.headers["x-frame-options"], "DENY")
+
     def test_quality_assessment_is_bounded_and_explainable(self):
         assessment = assess_content_quality(
             "According to the source, this article contains useful reporting. " * 25

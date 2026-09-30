@@ -1,0 +1,59 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      TECHSCOPE_API_KEY: ${TECHSCOPE_API_KEY:?Set TECHSCOPE_API_KEY in .env}
+      TECHSCOPE_ALLOWED_HOSTS: localhost,127.0.0.1
+      TECHSCOPE_CORS_ORIGINS: http://localhost:8501
+      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgresql://techscope:techscope@postgres:5432/techscope
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  dashboard:
+    build: .
+    command: uvicorn dashboard.dashboard:app --host 0.0.0.0 --port 8501
+    ports:
+      - "8501:8501"
+    environment:
+      TECHSCOPE_API_KEY: ${TECHSCOPE_API_KEY:?Set TECHSCOPE_API_KEY in .env}
+      TECHSCOPE_ALLOWED_HOSTS: localhost,127.0.0.1
+      TECHSCOPE_CORS_ORIGINS: http://localhost:8501
+      DATABASE_URL: postgresql://techscope:techscope@postgres:5432/techscope
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: techscope
+      POSTGRES_PASSWORD: techscope
+      POSTGRES_DB: techscope
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U techscope -d techscope"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres-data:

@@ -1,14 +1,14 @@
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, Query, Depends
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 import os
-import sqlite3
 import json
 
-from storage.schema import DB_PATH, init_db
+from utils.save_data import load_articles
+from api.auth import verify_api_key
 
 # --- Initialization ---
 app = FastAPI(title="TechScope Dashboard", version="1.0")
@@ -17,7 +17,6 @@ app = FastAPI(title="TechScope Dashboard", version="1.0")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 STATIC_DIR = os.path.join(BASE_DIR, "static")
-init_db()
 
 # --- Logging ---
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -39,61 +38,55 @@ app.add_middleware(
 )
 
 # --- Route: HTML Dashboard ---
-@app.get("/", response_class=HTMLResponse)
-def read_dashboard(request: Request):
+@app.get("/", response_class=HTMLResponse, dependencies=[Depends(verify_api_key)])
+def read_dashboard(
+    request: Request,
+    search: str | None = Query(default=None, max_length=200),
+    source: str | None = Query(default=None, max_length=200),
+    min_quality: float | None = Query(default=None, ge=0, le=1),
+):
     try:
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
+        articles = _dashboard_articles(search, source, min_quality)
 
-        cursor.execute("SELECT id, summary, COALESCE(quality_score, credibility), keywords, quality_explanation, analysis_version, created_at FROM articles ORDER BY created_at DESC")
-        rows = cursor.fetchall()
-        conn.close()
-
-        articles = [
-            {
-                "id": row[0],
-                "summary": row[1],
-                "credibility": row[2],
-                "keywords": row[3].split(','),
-                "quality_signals": json.loads(row[4]) if row[4] else [],
-                "analysis_version": row[5],
-                "created_at": row[6]
-            }
-            for row in rows
-        ]
-
-        return templates.TemplateResponse("dashboard.html", {"request": request, "articles": articles})
+        return templates.TemplateResponse(
+            request=request,
+            name="dashboard.html",
+            context={"articles": articles},
+        )
 
     except Exception as e:
         logging.error(f"Error loading dashboard: {e}")
         raise HTTPException(status_code=500, detail="Failed to load dashboard.")
 
 # --- Optional JSON API Endpoint ---
-@app.get("/api/records", response_class=JSONResponse)
-def get_records():
+@app.get("/api/records", response_class=JSONResponse, dependencies=[Depends(verify_api_key)])
+def get_records(
+    search: str | None = Query(default=None, max_length=200),
+    source: str | None = Query(default=None, max_length=200),
+    min_quality: float | None = Query(default=None, ge=0, le=1),
+):
     try:
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-
-        cursor.execute("SELECT id, summary, COALESCE(quality_score, credibility), keywords, quality_explanation, analysis_version, created_at FROM articles ORDER BY created_at DESC")
-        rows = cursor.fetchall()
-        conn.close()
-
-        articles = [
-            {
-                "id": row[0],
-                "summary": row[1],
-                "credibility": row[2],
-                "keywords": row[3].split(','),
-                "quality_signals": json.loads(row[4]) if row[4] else [],
-                "analysis_version": row[5],
-                "created_at": row[6]
-            }
-            for row in rows
-        ]
+        articles = _dashboard_articles(search, source, min_quality)
 
         return {"count": len(articles), "articles": articles}
 
     except Exception as e:
         logging.error(f"API error: {e}")
         raise HTTPException(status_code=500, detail="Failed to retrieve records.")
+
+
+def _dashboard_articles(search, source, min_quality):
+    articles = load_articles(
+        limit=100,
+        search=search,
+        source=source,
+        min_quality=min_quality,
+    )
+    for article in articles:
+        article["keywords"] = [word for word in article.get("keywords", "").split(",") if word]
+        try:
+            article["quality_signals"] = json.loads(article.get("quality_explanation", "") or "[]")
+        except (TypeError, json.JSONDecodeError):
+            article["quality_signals"] = []
+        article["credibility"] = article.get("quality_score") or article.get("credibility")
+    return articles

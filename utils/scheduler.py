@@ -1,14 +1,11 @@
 import time
 from typing import List, Dict
-from utils.clean_text import clean_article_text
+from datetime import datetime, timedelta, timezone
 from utils.detect_duplicates import detect_similar_articles
 from utils.save_data import save_articles
+from utils.feed_ingest import fetch_feed
+from storage.feed_repo import list_feeds
 import logging
-
-try:
-    import feedparser
-except ImportError:
-    feedparser = None
 
 logging.basicConfig(level=logging.INFO)
 
@@ -23,23 +20,37 @@ TECH_FEEDS = [
 
 def fetch_articles(feed_urls: List[str]) -> List[Dict]:
     """Fetch and clean articles from a list of RSS feeds."""
-    if feedparser is None:
-        raise RuntimeError("feedparser is required to fetch RSS feeds")
     articles = []
 
     for url in feed_urls:
-        feed = feedparser.parse(url)
-        for entry in feed.entries:
-            article = {
-                "title": entry.get("title", "").strip(),
-                "link": entry.get("link", ""),
-                "summary": clean_article_text(entry.get("summary", "") or entry.get("content", [{}])[0].get("value", "")),
-                "published": entry.get("published", ""),
-                "source": feed.feed.get("title", "Unknown")
-            }
-            articles.append(article)
+        articles.extend(fetch_feed(url).articles)
 
     return articles
+
+
+def ingest_feeds_once(feed_urls: List[str] | None = None) -> int:
+    """Fetch, deduplicate, and persist one feed-ingestion cycle."""
+    configured_urls = feed_urls or [feed["url"] for feed in list_feeds(enabled=True)]
+    raw_articles = fetch_articles(configured_urls or TECH_FEEDS)
+    unique_articles = filter_duplicates(raw_articles)
+    save_articles(unique_articles)
+    return len(unique_articles)
+
+
+def due_feed_urls() -> list[str]:
+    now = datetime.now(timezone.utc)
+    due = []
+    for feed in list_feeds(enabled=True):
+        if not feed.get("last_checked"):
+            due.append(feed["url"])
+            continue
+        try:
+            last_checked = datetime.fromisoformat(feed["last_checked"])
+            if last_checked + timedelta(minutes=feed["interval_minutes"]) <= now:
+                due.append(feed["url"])
+        except ValueError:
+            due.append(feed["url"])
+    return due
 
 def filter_duplicates(articles: List[Dict]) -> List[Dict]:
     """Remove duplicate articles based on semantic similarity."""
@@ -59,10 +70,7 @@ def run_scheduler(interval_minutes: int = 30):
     logging.info(" Starting TechScope Scheduler...")
     while True:
         logging.info(" Fetching latest tech articles...")
-        raw_articles = fetch_articles(TECH_FEEDS)
-        unique_articles = filter_duplicates(raw_articles)
-        save_articles(unique_articles)
-
-        logging.info(f" {len(unique_articles)} new unique articles saved.")
+        saved_count = ingest_feeds_once(due_feed_urls() or None)
+        logging.info(f" {saved_count} new unique articles saved.")
         logging.info(f" Sleeping for {interval_minutes} minutes...\n")
         time.sleep(interval_minutes * 60)

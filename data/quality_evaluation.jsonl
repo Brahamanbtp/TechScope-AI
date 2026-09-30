@@ -1,0 +1,8 @@
+{"id":"q1","text":"According to the published benchmark, the researchers measured latency across three workloads and report the sample size and limitations.","label":"higher"}
+{"id":"q2","text":"The company announced a new chip and described its expected performance, while noting that independent testing has not yet been completed.","label":"mixed"}
+{"id":"q3","text":"You won't believe this shocking miracle product!!!","label":"lower"}
+{"id":"q4","text":"A short post says the update is available today but provides no source, measurements, or supporting details.","label":"lower"}
+{"id":"q5","text":"The report compares two systems using public datasets, names the authors, links to methodology, and discusses uncertainty in the results.","label":"higher"}
+{"id":"q6","text":"This is a long article with repeated repeated repeated words and dramatic claims that will blow your mind!!!","label":"lower"}
+{"id":"q7","text":"The vendor says the service reduces cost, but the article does not provide independent measurements or a reproducible method.","label":"mixed"}
+{"id":"q8","text":"According to the regulator filing, the acquisition is subject to review and the parties disclosed the expected timeline and conditions.","label":"higher"}

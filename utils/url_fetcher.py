@@ -4,7 +4,7 @@ from urllib.parse import urlparse
 
 import httpx
 
-from utils.clean_text import clean_article_text
+from utils.article_extractor import extract_article_text
 
 
 MAX_RESPONSE_BYTES = 2_000_000
@@ -66,14 +66,15 @@ def fetch_article(raw_url: str) -> dict:
     except (httpx.HTTPError, UnicodeError, ValueError) as exc:
         raise FetchError("The article could not be fetched") from exc
 
-    cleaned_content = clean_article_text(html)
-    if len(cleaned_content) < 100:
-        raise FetchError("The fetched page does not contain enough article text")
-
     parsed = urlparse(url)
     from bs4 import BeautifulSoup
 
     soup = BeautifulSoup(html, "html.parser")
+    try:
+        cleaned_content = extract_article_text(html)
+    except ValueError as exc:
+        raise FetchError(str(exc)) from exc
+
     title_tag = soup.find("title")
     title = title_tag.get_text(" ", strip=True) if title_tag else ""
     return {
