@@ -72,6 +72,8 @@ Endpoints:
 | GET | `/api/v1/clusters` | List story clusters; requires `x-api-key` |
 | GET | `/api/v1/clusters/{id}/timeline` | Chronological story timeline |
 | GET | `/api/v1/articles/{id}/claims` | Candidate claims linked to evidence |
+| POST | `/api/v1/articles/{id}/review` | Submit an authenticated human quality review |
+| GET | `/api/v1/articles/{id}/reviews` | View reviews; admin only |
 | POST | `/api/v1/reputation/rebuild` | Rebuild source signal aggregates; admin only |
 | GET | `/api/v1/reputation` | View source signal aggregates |
 | GET | `/api/v1/me/webhooks` | List user webhook subscriptions |

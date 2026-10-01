@@ -2,10 +2,6 @@
   "examples": 30,
   "accuracy": 0.333,
   "per_class": {
-    "higher": {
-      "precision": 0.0,
-      "recall": 0.0
-    },
     "mixed": {
       "precision": 0.0,
       "recall": 0.0
@@ -13,6 +9,10 @@
     "lower": {
       "precision": 0.357,
       "recall": 1.0
+    },
+    "higher": {
+      "precision": 0.0,
+      "recall": 0.0
     }
   },
   "macro_f1": 0.175,

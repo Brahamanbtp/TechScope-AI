@@ -52,6 +52,13 @@ TechScope is being developed as an evidence-oriented technology intelligence pla
 - Structured JSON logging and request metrics
 - Load-test script and CI security scan steps
 - Source adapter protocol, registry, documentation, and contract test
+- Human quality review submission and calibration report workflow
+- Slack, Discord, Telegram, and Matrix payload adapters
+- Provider-aware webhook subscriptions with adapter selection
+- Webhook delivery retry/dead-letter persistence
+- Optional OpenTelemetry instrumentation and Prometheus counters
+- PWA keyboard navigation and accessible focus workflow
+- Publishable SDK scaffold in `sdk/`
 
 ### API and Security
 
@@ -68,7 +75,7 @@ TechScope is being developed as an evidence-oriented technology intelligence pla
 ### Verification
 
 - Current test command: `python -m unittest discover -s tests -v`
-- Current result: 23 tests passing
+- Current result: 24 tests passing
 - Compilation: passing
 - `git diff --check`: passing
 - Quality evaluator: 30 examples, per-class metrics, calibration bins, Brier score, status `experimental`
@@ -82,16 +89,17 @@ TechScope is being developed as an evidence-oriented technology intelligence pla
 - The quality model must not be described as factuality or source reliability.
 - SQL `LIKE` search and TF-IDF semantic search are both available.
 - The dashboard is functional but still minimal.
-- Webhook subscriptions, retries/dead-letter delivery, PWA shell, CI, tooling, structured logs, and request metrics are implemented; full distributed tracing remains.
+- Webhook subscriptions, provider payloads, retries/dead-letter delivery, PWA shell, CI, tooling, structured logs, and request metrics are implemented; full distributed tracing remains.
 - `scripts/benchmark_quality.py` writes `data/quality_benchmark.json`.
+- `scripts/calibrate_quality.py` writes human-review calibration data when production reviews exist.
 
 ## Remaining Priorities
 
-1. Collect independently labelled production data and calibrate the quality model.
-2. Add first-party Slack/Discord/Telegram/Matrix payload adapters.
-3. Add distributed OpenTelemetry tracing and richer metrics dashboards.
-4. Expand the PWA into a complete offline/mobile reading experience.
-5. Publish and version the source-adapter SDK as a separate package.
+1. Collect enough independently labelled production data to calibrate the quality model.
+2. Add integration-specific credentials and delivery retry queues for notification services.
+3. Add distributed OpenTelemetry exporters and production metrics dashboards.
+4. Expand the PWA into complete offline article caching and mobile navigation.
+5. Publish the SDK to a package registry with release automation.
 
 ## Handoff Commands
 

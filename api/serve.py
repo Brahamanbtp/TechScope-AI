@@ -42,6 +42,7 @@ from utils.evidence import extract_evidence
 from utils.claims import extract_claims
 from storage.claim_repo import list_claims
 from storage.reputation_repo import list_source_reputation, rebuild_source_reputation
+from storage.review_repo import list_reviews, submit_review
 from utils.search import semantic_search
 from storage.webhook_repo import create_webhook, delete_webhook, list_webhooks
 
@@ -57,6 +58,11 @@ app = FastAPI(
 logger = logging.getLogger("techscope.api")
 configure_logging()
 request_metrics = {"total": 0, "errors": 0}
+try:
+    from prometheus_client import Counter
+    http_requests = Counter("techscope_http_requests_total", "HTTP requests", ["method", "path", "status"])
+except ImportError:
+    http_requests = None
 
 allowed_hosts = os.getenv("TECHSCOPE_ALLOWED_HOSTS", "localhost,127.0.0.1,testserver").split(",")
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
@@ -66,6 +72,8 @@ app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
 async def add_security_headers(request: Request, call_next):
     request_metrics["total"] += 1
     response = await call_next(request)
+    if http_requests is not None:
+        http_requests.labels(request.method, request.url.path, str(response.status_code)).inc()
     if response.status_code >= 500:
         request_metrics["errors"] += 1
     response.headers["X-Content-Type-Options"] = "nosniff"
@@ -81,6 +89,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+try:
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+    FastAPIInstrumentor.instrument_app(app)
+except ImportError:
+    pass
 
 # --------------------------
 # Pydantic input model
@@ -118,6 +131,12 @@ class SavedSearchInput(BaseModel):
 class WebhookInput(BaseModel):
     url: str = Field(..., min_length=8, max_length=2_000)
     event: str = Field(default="*", max_length=100)
+    adapter: str = Field(default="generic", pattern="^(generic|slack|discord|telegram|matrix)$")
+
+
+class QualityReviewInput(BaseModel):
+    label: str = Field(..., pattern="^(lower|mixed|higher)$")
+    notes: str = Field(default="", max_length=2_000)
 
 # --------------------------
 # Routes
@@ -355,6 +374,16 @@ def get_article_claims(article_id: int):
     return {"article_id": article_id, "claims": list_claims(article_id)}
 
 
+@app.post("/api/v1/articles/{article_id}/review", status_code=status.HTTP_201_CREATED)
+def review_article(article_id: int, input: QualityReviewInput, user=Depends(verify_user)):
+    return submit_review(article_id, user["id"], input.label, input.notes)
+
+
+@app.get("/api/v1/articles/{article_id}/reviews", dependencies=[Depends(verify_admin)])
+def get_article_reviews(article_id: int):
+    return {"reviews": list_reviews(article_id)}
+
+
 @app.post("/api/v1/reputation/rebuild", dependencies=[Depends(verify_admin)])
 def rebuild_reputation():
     return {"sources_updated": rebuild_source_reputation()}
@@ -393,7 +422,7 @@ def get_webhooks(user=Depends(verify_user)):
 
 @app.post("/api/v1/me/webhooks", status_code=status.HTTP_201_CREATED)
 def add_webhook(input: WebhookInput, user=Depends(verify_user)):
-    return create_webhook(user["id"], input.url, input.event)
+    return create_webhook(user["id"], input.url, input.event, input.adapter)
 
 
 @app.delete("/api/v1/me/webhooks/{webhook_id}", status_code=status.HTTP_204_NO_CONTENT)

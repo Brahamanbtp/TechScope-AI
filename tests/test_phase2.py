@@ -23,6 +23,7 @@ from storage import search_repo
 from utils.evidence import extract_evidence
 from utils.claims import extract_claims
 from sources.registry import get_adapter, list_adapters, register_adapter
+from utils.notification_adapters import payload_for_adapter
 from utils.search import semantic_search
 from sources import arstechnica, techcrunch, theverge, wired
 
@@ -85,6 +86,9 @@ def source_article_test(module, html, expected_title, expected_author):
 
 
 class Phase2Tests(unittest.TestCase):
+    def test_notification_adapters(self):
+        for adapter in ("slack", "discord", "telegram", "matrix"):
+            self.assertTrue(payload_for_adapter(adapter, "article.created", {"id": 1}))
     def test_source_adapter_sdk_contract(self):
         class Adapter:
             name = "test"

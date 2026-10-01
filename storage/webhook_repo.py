@@ -3,14 +3,14 @@ import json
 from storage.schema import DB_PATH, init_db, _utc_now
 
 
-def create_webhook(user_id: int, url: str, event: str) -> dict:
+def create_webhook(user_id: int, url: str, event: str, adapter: str = "generic") -> dict:
     init_db()
     with connect(DB_PATH) as connection:
-        cursor = execute(connection, "INSERT INTO webhooks (user_id, url, event, created_at) VALUES (?, ?, ?, ?) ON CONFLICT(user_id, url, event) DO UPDATE SET active = 1", (user_id, url, event, _utc_now()))
+        cursor = execute(connection, "INSERT INTO webhooks (user_id, url, event, adapter, created_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(user_id, url, event) DO UPDATE SET active = 1, adapter = excluded.adapter", (user_id, url, event, adapter, _utc_now()))
         webhook_id = getattr(cursor, "lastrowid", None)
         if webhook_id is None:
             webhook_id = execute(connection, "SELECT id FROM webhooks WHERE user_id = ? AND url = ? AND event = ?", (user_id, url, event)).fetchone()[0]
-    return {"id": webhook_id, "user_id": user_id, "url": url, "event": event, "active": True}
+    return {"id": webhook_id, "user_id": user_id, "url": url, "event": event, "adapter": adapter, "active": True}
 
 
 def list_webhooks(user_id: int) -> list[dict]:
