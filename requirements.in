@@ -21,3 +21,5 @@ scikit-learn
 nltk
 textblob
 pytest
+prometheus-client
+opentelemetry-api

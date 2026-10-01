@@ -7,6 +7,8 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 import uvicorn
 import logging
 
+from utils.observability import configure_logging
+
 # --------------------------
 # Ensure project root is in sys.path
 # --------------------------
@@ -41,6 +43,7 @@ from utils.claims import extract_claims
 from storage.claim_repo import list_claims
 from storage.reputation_repo import list_source_reputation, rebuild_source_reputation
 from utils.search import semantic_search
+from storage.webhook_repo import create_webhook, delete_webhook, list_webhooks
 
 # --------------------------
 # FastAPI app
@@ -52,6 +55,8 @@ app = FastAPI(
 )
 
 logger = logging.getLogger("techscope.api")
+configure_logging()
+request_metrics = {"total": 0, "errors": 0}
 
 allowed_hosts = os.getenv("TECHSCOPE_ALLOWED_HOSTS", "localhost,127.0.0.1,testserver").split(",")
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
@@ -59,7 +64,10 @@ app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
 
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
+    request_metrics["total"] += 1
     response = await call_next(request)
+    if response.status_code >= 500:
+        request_metrics["errors"] += 1
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "no-referrer"
@@ -106,6 +114,11 @@ class SavedSearchInput(BaseModel):
     source: str | None = Field(default=None, max_length=200)
     min_quality: float | None = Field(default=None, ge=0, le=1)
 
+
+class WebhookInput(BaseModel):
+    url: str = Field(..., min_length=8, max_length=2_000)
+    event: str = Field(default="*", max_length=100)
+
 # --------------------------
 # Routes
 # --------------------------
@@ -118,6 +131,11 @@ def root():
 @app.get("/healthz")
 def healthz():
     return {"status": "ok"}
+
+
+@app.get("/metrics")
+def metrics():
+    return "# TYPE techscope_http_requests_total counter\ntechscope_http_requests_total %d\n# TYPE techscope_http_errors_total counter\ntechscope_http_errors_total %d\n" % (request_metrics["total"], request_metrics["errors"])
 
 
 @app.post("/api/v1/auth/login")
@@ -366,6 +384,22 @@ def create_saved_search(input: SavedSearchInput, user=Depends(verify_user)):
 def remove_saved_search(search_id: int, user=Depends(verify_user)):
     if not delete_search(user["id"], search_id):
         raise HTTPException(status_code=404, detail="Saved search not found")
+
+
+@app.get("/api/v1/me/webhooks")
+def get_webhooks(user=Depends(verify_user)):
+    return {"webhooks": list_webhooks(user["id"])}
+
+
+@app.post("/api/v1/me/webhooks", status_code=status.HTTP_201_CREATED)
+def add_webhook(input: WebhookInput, user=Depends(verify_user)):
+    return create_webhook(user["id"], input.url, input.event)
+
+
+@app.delete("/api/v1/me/webhooks/{webhook_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_webhook(webhook_id: int, user=Depends(verify_user)):
+    if not delete_webhook(user["id"], webhook_id):
+        raise HTTPException(status_code=404, detail="Webhook not found")
 
 # --------------------------
 # Run server (dev mode)

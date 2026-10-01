@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.lock
+      - run: python -m compileall -q .
+      - run: python -m unittest discover -s tests -v
+      - run: git diff --check
+      - run: pip install pip-audit bandit
+      - run: pip-audit -r requirements.lock
+      - run: bandit -r api storage utils -ll
+      - run: python -m uvicorn api.serve:app --host 127.0.0.1 --port 8000 &
+      - run: python scripts/load_test.py

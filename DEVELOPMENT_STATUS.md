@@ -45,6 +45,13 @@ TechScope is being developed as an evidence-oriented technology intelligence pla
 - Chronological story timelines per cluster
 - Candidate claims linked to extracted evidence
 - Transparent source coverage/quality aggregates
+- Webhook subscriptions and event delivery
+- Prometheus-style request metrics endpoint
+- PWA manifest/service worker shell
+- CI workflow and Python tooling configuration
+- Structured JSON logging and request metrics
+- Load-test script and CI security scan steps
+- Source adapter protocol, registry, documentation, and contract test
 
 ### API and Security
 
@@ -61,10 +68,10 @@ TechScope is being developed as an evidence-oriented technology intelligence pla
 ### Verification
 
 - Current test command: `python -m unittest discover -s tests -v`
-- Current result: 22 tests passing
+- Current result: 23 tests passing
 - Compilation: passing
 - `git diff --check`: passing
-- Quality evaluator: 8 examples, 0.375 accuracy, status `experimental`
+- Quality evaluator: 30 examples, per-class metrics, calibration bins, Brier score, status `experimental`
 
 ## Current Implementation Notes
 
@@ -75,14 +82,16 @@ TechScope is being developed as an evidence-oriented technology intelligence pla
 - The quality model must not be described as factuality or source reliability.
 - SQL `LIKE` search and TF-IDF semantic search are both available.
 - The dashboard is functional but still minimal.
+- Webhook subscriptions, retries/dead-letter delivery, PWA shell, CI, tooling, structured logs, and request metrics are implemented; full distributed tracing remains.
+- `scripts/benchmark_quality.py` writes `data/quality_benchmark.json`.
 
 ## Remaining Priorities
 
-1. Expand the labelled quality dataset and add calibration/benchmark reports.
-2. Add notifications, webhooks, Slack/Discord/Telegram/Matrix integrations.
-3. Add OpenTelemetry, Prometheus metrics, structured logs, CI/CD, security scans, and load tests.
-4. Add PWA/mobile reading experience and keyboard/accessibility workflows.
-5. Add plugin/adapter SDKs and community source contribution tooling.
+1. Collect independently labelled production data and calibrate the quality model.
+2. Add first-party Slack/Discord/Telegram/Matrix payload adapters.
+3. Add distributed OpenTelemetry tracing and richer metrics dashboards.
+4. Expand the PWA into a complete offline/mobile reading experience.
+5. Publish and version the source-adapter SDK as a separate package.
 
 ## Handoff Commands
 

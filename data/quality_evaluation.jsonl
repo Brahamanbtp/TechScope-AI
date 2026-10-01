@@ -6,3 +6,25 @@
 {"id":"q6","text":"This is a long article with repeated repeated repeated words and dramatic claims that will blow your mind!!!","label":"lower"}
 {"id":"q7","text":"The vendor says the service reduces cost, but the article does not provide independent measurements or a reproducible method.","label":"mixed"}
 {"id":"q8","text":"According to the regulator filing, the acquisition is subject to review and the parties disclosed the expected timeline and conditions.","label":"higher"}
+{"id":"q9","text":"The laboratory published its method, sample size, baseline, and confidence interval for the battery test.","label":"higher"}
+{"id":"q10","text":"The startup claims its platform is faster, but no benchmark or independent review is provided.","label":"mixed"}
+{"id":"q11","text":"This unbelievable secret trick will destroy every competitor overnight!!!","label":"lower"}
+{"id":"q12","text":"The article reports a product launch and links to the official announcement, but independent performance evidence is not available.","label":"mixed"}
+{"id":"q13","text":"Researchers describe the dataset, limitations, and reproduction steps for the reported result.","label":"higher"}
+{"id":"q14","text":"Nobody can deny this revolutionary device is perfect and absolutely changes everything!!!","label":"lower"}
+{"id":"q15","text":"The vendor announced a partnership and named the organizations involved, while financial terms remain undisclosed.","label":"mixed"}
+{"id":"q16","text":"The audit cites the public filing, identifies the reviewed controls, and reports unresolved limitations.","label":"higher"}
+{"id":"q17","text":"Top secret experts say this miracle update will blow your mind.","label":"lower"}
+{"id":"q18","text":"A short announcement names the release date but provides no supporting measurements or source links.","label":"lower"}
+{"id":"q19","text":"The investigation compares several independent accounts and clearly separates confirmed facts from open questions.","label":"higher"}
+{"id":"q20","text":"The company reportedly expects lower costs, though the claim has not yet been independently verified.","label":"mixed"}
+{"id":"q21","text":"The peer-reviewed study reports methods, sample counts, baselines, and limitations for its model comparison.","label":"higher"}
+{"id":"q22","text":"The provider says its new service is better, but gives no reproducible test or independent source.","label":"mixed"}
+{"id":"q23","text":"This secret breakthrough is guaranteed to change everything forever!!!","label":"lower"}
+{"id":"q24","text":"The public filing identifies the transaction terms, review authority, and expected decision window.","label":"higher"}
+{"id":"q25","text":"The release announcement names the product and date, but does not report measured outcomes.","label":"mixed"}
+{"id":"q26","text":"Experts obviously agree this miracle technology cannot fail and will dominate every market!!!","label":"lower"}
+{"id":"q27","text":"The benchmark documents hardware, software versions, workloads, and uncertainty intervals.","label":"higher"}
+{"id":"q28","text":"The company reports projected savings based on internal tests and says external validation is planned.","label":"mixed"}
+{"id":"q29","text":"You will never believe this shocking top secret discovery!!!","label":"lower"}
+{"id":"q30","text":"The review compares independent datasets and clearly identifies where the evidence is incomplete.","label":"higher"}

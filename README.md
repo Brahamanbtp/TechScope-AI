@@ -74,6 +74,10 @@ Endpoints:
 | GET | `/api/v1/articles/{id}/claims` | Candidate claims linked to evidence |
 | POST | `/api/v1/reputation/rebuild` | Rebuild source signal aggregates; admin only |
 | GET | `/api/v1/reputation` | View source signal aggregates |
+| GET | `/api/v1/me/webhooks` | List user webhook subscriptions |
+| POST | `/api/v1/me/webhooks` | Create a webhook subscription |
+| DELETE | `/api/v1/me/webhooks/{id}` | Disable a webhook subscription |
+| GET | `/metrics` | Prometheus-style request counters |
 | POST | `/api/v1/clusters/rebuild` | Rebuild TF-IDF story clusters; admin only |
 | GET | `/api/v1/search` | Ranked TF-IDF semantic article search |
 | GET | `/api/v1/me/searches` | List saved searches |
@@ -127,6 +131,11 @@ Article analyses also retain explicit attribution sentences and linked URLs as
 evidence records. Evidence extraction identifies possible support; it does not
 verify that a claim is true.
 
+The dashboard includes an installable PWA shell through a manifest and service
+worker. CI runs compilation, tests, and diff hygiene through GitHub Actions.
+Source contributors can implement the `SourceAdapter` protocol in
+`sources/base.py` and register adapters through `sources/registry.py`.
+
 The first administrator can be created once with
 `POST /api/v1/auth/bootstrap` using `TECHSCOPE_BOOTSTRAP_SECRET`. Subsequent
 requests can use the returned bearer token with `Authorization: Bearer ...`.
@@ -172,9 +181,9 @@ backends.
 ## Development Status
 
 The project is being developed as a feed-driven technology intelligence
-platform. Remaining major work includes user accounts, bookmarks, notifications,
-source reputation, distributed job workers, and a larger independently labelled
-quality dataset.
+platform. Remaining major work includes larger independent evaluation data,
+reliable webhook retry/dead-letter handling, full observability, a complete
+mobile reading experience, and a packaged source-adapter SDK.
 
 ## Tests
 

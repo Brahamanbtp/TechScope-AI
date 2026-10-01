@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="/static/manifest.json">
   <title>TechScope Dashboard</title>
   <style>
     body { font-family: Arial; background: #f9f9f9; padding: 2rem; }
@@ -11,6 +13,7 @@
   </style>
 </head>
 <body>
+  <a href="#main-content" class="skip-link">Skip to article list</a>
   <h1>📊 TechScope Dashboard</h1>
   <form method="get">
     <label>
@@ -27,8 +30,9 @@
     </label>
     <button type="submit">Filter</button>
   </form>
+  <main id="main-content" aria-label="Technology articles">
   {% for article in articles %}
-    <div class="card">
+    <article class="card">
       <h3>📝 Summary</h3>
       <p>{{ article.summary }}</p>
       <p><strong>Content Quality Score:</strong> {{ article.credibility }}</p>
@@ -46,7 +50,9 @@
         {% endfor %}
       </p>
       <p><small><strong>Created:</strong> {{ article.created_at }}</small></p>
-    </div>
+    </article>
   {% endfor %}
+  </main>
+  <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('/static/sw.js');</script>
 </body>
 </html>

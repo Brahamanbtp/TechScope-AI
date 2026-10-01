@@ -22,6 +22,7 @@ from storage import article_actions
 from storage import search_repo
 from utils.evidence import extract_evidence
 from utils.claims import extract_claims
+from sources.registry import get_adapter, list_adapters, register_adapter
 from utils.search import semantic_search
 from sources import arstechnica, techcrunch, theverge, wired
 
@@ -84,6 +85,19 @@ def source_article_test(module, html, expected_title, expected_author):
 
 
 class Phase2Tests(unittest.TestCase):
+    def test_source_adapter_sdk_contract(self):
+        class Adapter:
+            name = "test"
+
+            def get_article_links(self):
+                return []
+
+            def parse_article(self, url):
+                return {"url": url, "content": ""}
+
+        register_adapter(Adapter())
+        self.assertIn("test", list_adapters())
+        self.assertEqual(get_adapter("test").parse_article("https://example.com")["url"], "https://example.com")
     def test_candidate_claims_link_evidence(self):
         claims = extract_claims("According to the report, the company launched a new processor in 2026.", [{"text": "According to the report, the company launched a new processor in 2026.", "urls": [], "type": "attribution"}])
         self.assertEqual(claims[0]["type"], "candidate")
@@ -160,8 +174,9 @@ class Phase2Tests(unittest.TestCase):
 
     def test_quality_evaluation_dataset_is_labelled(self):
         result = evaluate()
-        self.assertEqual(result["examples"], 8)
+        self.assertGreaterEqual(result["examples"], 20)
         self.assertEqual(result["status"], "experimental")
+        self.assertIn("higher", result["per_class"])
         self.assertGreaterEqual(result["accuracy"], 0)
     def test_conditional_feed_request_uses_validators(self):
         feed = '<rss><channel><item><title>Story</title><link>https://example.com/story</link><description>Feed content</description></item></channel></rss>'
