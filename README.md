@@ -70,8 +70,15 @@ Endpoints:
 | DELETE | `/api/v1/articles/{id}/bookmark` | Remove a bookmark |
 | POST | `/api/v1/articles/{id}/read` | Mark an article read |
 | GET | `/api/v1/clusters` | List story clusters; requires `x-api-key` |
+| GET | `/api/v1/clusters/{id}/timeline` | Chronological story timeline |
+| GET | `/api/v1/articles/{id}/claims` | Candidate claims linked to evidence |
+| POST | `/api/v1/reputation/rebuild` | Rebuild source signal aggregates; admin only |
+| GET | `/api/v1/reputation` | View source signal aggregates |
 | POST | `/api/v1/clusters/rebuild` | Rebuild TF-IDF story clusters; admin only |
 | GET | `/api/v1/search` | Ranked TF-IDF semantic article search |
+| GET | `/api/v1/me/searches` | List saved searches |
+| POST | `/api/v1/me/searches` | Save a search |
+| DELETE | `/api/v1/me/searches/{id}` | Delete a saved search |
 
 Analysis requests must contain between 100 and 100,000 characters in `text`.
 URL analysis accepts only public HTTP(S) URLs, does not follow redirects, limits

@@ -41,6 +41,10 @@ TechScope is being developed as an evidence-oriented technology intelligence pla
 - Redis-backed ingestion queue with standalone `worker.py`
 - Per-user bookmarks and read state
 - TF-IDF semantic search endpoint
+- User-owned saved searches
+- Chronological story timelines per cluster
+- Candidate claims linked to extracted evidence
+- Transparent source coverage/quality aggregates
 
 ### API and Security
 
@@ -57,7 +61,7 @@ TechScope is being developed as an evidence-oriented technology intelligence pla
 ### Verification
 
 - Current test command: `python -m unittest discover -s tests -v`
-- Current result: 20 tests passing
+- Current result: 22 tests passing
 - Compilation: passing
 - `git diff --check`: passing
 - Quality evaluator: 8 examples, 0.375 accuracy, status `experimental`
@@ -74,13 +78,11 @@ TechScope is being developed as an evidence-oriented technology intelligence pla
 
 ## Remaining Priorities
 
-1. Add richer story timelines and saved searches on top of semantic search.
-2. Add claim/evidence graphs and source reputation with independent evaluation data.
-3. Expand the labelled quality dataset and add calibration/benchmark reports.
-4. Add notifications, webhooks, Slack/Discord/Telegram/Matrix integrations.
-5. Add OpenTelemetry, Prometheus metrics, structured logs, CI/CD, security scans, and load tests.
-6. Add PWA/mobile reading experience and keyboard/accessibility workflows.
-7. Add plugin/adapter SDKs and community source contribution tooling.
+1. Expand the labelled quality dataset and add calibration/benchmark reports.
+2. Add notifications, webhooks, Slack/Discord/Telegram/Matrix integrations.
+3. Add OpenTelemetry, Prometheus metrics, structured logs, CI/CD, security scans, and load tests.
+4. Add PWA/mobile reading experience and keyboard/accessibility workflows.
+5. Add plugin/adapter SDKs and community source contribution tooling.
 
 ## Handoff Commands
 

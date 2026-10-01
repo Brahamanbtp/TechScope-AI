@@ -29,3 +29,13 @@ def list_clusters() -> list[dict]:
             connection,
             "SELECT cluster_id, cluster_version, COUNT(*) AS article_count FROM articles WHERE cluster_id IS NOT NULL GROUP BY cluster_id, cluster_version ORDER BY article_count DESC",
         ))
+
+
+def get_cluster_timeline(cluster_id: str) -> list[dict]:
+    init_db()
+    with connect(DB_PATH) as connection:
+        return rows(execute(
+            connection,
+            "SELECT id, url, title, source, author, date_published, summary, quality_score, created_at FROM articles WHERE cluster_id = ? ORDER BY COALESCE(date_published, created_at) ASC",
+            (cluster_id,),
+        ))

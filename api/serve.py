@@ -33,9 +33,13 @@ from utils.scheduler import ingest_feeds_once
 from utils.url_fetcher import validate_public_url
 from utils.job_runner import submit_ingest_job
 from storage.user_repo import authenticate_user, count_users, create_session, create_user
-from storage.cluster_repo import list_clusters
+from storage.cluster_repo import get_cluster_timeline, list_clusters
+from storage.search_repo import delete_search, list_searches, save_search
 from utils.clustering import cluster_articles
 from utils.evidence import extract_evidence
+from utils.claims import extract_claims
+from storage.claim_repo import list_claims
+from storage.reputation_repo import list_source_reputation, rebuild_source_reputation
 from utils.search import semantic_search
 
 # --------------------------
@@ -94,6 +98,13 @@ class LoginInput(BaseModel):
 
 class BootstrapInput(LoginInput):
     bootstrap_secret: str = Field(..., min_length=16, max_length=200)
+
+
+class SavedSearchInput(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    query: str = Field(..., min_length=2, max_length=200)
+    source: str | None = Field(default=None, max_length=200)
+    min_quality: float | None = Field(default=None, ge=0, le=1)
 
 # --------------------------
 # Routes
@@ -209,6 +220,7 @@ def analyze_url(input: UrlInput):
         article["quality_explanation"] = quality["signals"]
         article["analysis_version"] = quality["method"]
         article["evidence"] = extract_evidence(content)
+        article["claims"] = extract_claims(content, article["evidence"])
         write_article(article)
         return {
             "url": article["url"],
@@ -219,6 +231,7 @@ def analyze_url(input: UrlInput):
             "credibility": article["credibility"],
             "quality": quality,
             "evidence": article["evidence"],
+            "claims": article["claims"],
         }
     except FetchError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -314,9 +327,45 @@ def get_clusters():
     return {"clusters": list_clusters()}
 
 
+@app.get("/api/v1/clusters/{cluster_id}/timeline", dependencies=[Depends(verify_api_key)])
+def get_cluster_timeline_route(cluster_id: str):
+    return {"cluster_id": cluster_id, "articles": get_cluster_timeline(cluster_id)}
+
+
+@app.get("/api/v1/articles/{article_id}/claims", dependencies=[Depends(verify_api_key)])
+def get_article_claims(article_id: int):
+    return {"article_id": article_id, "claims": list_claims(article_id)}
+
+
+@app.post("/api/v1/reputation/rebuild", dependencies=[Depends(verify_admin)])
+def rebuild_reputation():
+    return {"sources_updated": rebuild_source_reputation()}
+
+
+@app.get("/api/v1/reputation", dependencies=[Depends(verify_api_key)])
+def get_reputation():
+    return {"sources": list_source_reputation(), "disclaimer": "Aggregated coverage and content signals, not factual truth."}
+
+
 @app.get("/api/v1/search", dependencies=[Depends(verify_api_key)])
 def search_articles(q: str = Query(..., min_length=2, max_length=200), limit: int = Query(default=20, ge=1, le=100)):
     return {"query": q, "results": semantic_search(q, limit)}
+
+
+@app.get("/api/v1/me/searches")
+def get_saved_searches(user=Depends(verify_user)):
+    return {"searches": list_searches(user["id"])}
+
+
+@app.post("/api/v1/me/searches", status_code=status.HTTP_201_CREATED)
+def create_saved_search(input: SavedSearchInput, user=Depends(verify_user)):
+    return save_search(user["id"], input.name, {"query": input.query, "source": input.source, "min_quality": input.min_quality})
+
+
+@app.delete("/api/v1/me/searches/{search_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_saved_search(search_id: int, user=Depends(verify_user)):
+    if not delete_search(user["id"], search_id):
+        raise HTTPException(status_code=404, detail="Saved search not found")
 
 # --------------------------
 # Run server (dev mode)

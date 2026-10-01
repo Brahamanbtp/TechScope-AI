@@ -19,7 +19,9 @@ from storage import feed_repo
 from storage import job_repo
 from storage import cluster_repo
 from storage import article_actions
+from storage import search_repo
 from utils.evidence import extract_evidence
+from utils.claims import extract_claims
 from utils.search import semantic_search
 from sources import arstechnica, techcrunch, theverge, wired
 
@@ -82,6 +84,16 @@ def source_article_test(module, html, expected_title, expected_author):
 
 
 class Phase2Tests(unittest.TestCase):
+    def test_candidate_claims_link_evidence(self):
+        claims = extract_claims("According to the report, the company launched a new processor in 2026.", [{"text": "According to the report, the company launched a new processor in 2026.", "urls": [], "type": "attribution"}])
+        self.assertEqual(claims[0]["type"], "candidate")
+        self.assertEqual(len(claims[0]["evidence"]), 1)
+    def test_saved_search_lifecycle(self):
+        with tempfile.NamedTemporaryFile(suffix=".db") as database:
+            with patch.object(schema, "DB_PATH", database.name), patch.object(search_repo, "DB_PATH", database.name):
+                created = search_repo.save_search(1, "AI launches", {"query": "AI", "source": None})
+                self.assertEqual(search_repo.list_searches(1)[0]["name"], "AI launches")
+                self.assertTrue(search_repo.delete_search(1, created["id"]))
     def test_semantic_search_empty_store(self):
         with tempfile.NamedTemporaryFile(suffix=".db") as database:
             with patch.object(schema, "DB_PATH", database.name), patch.object(cluster_repo, "DB_PATH", database.name):
