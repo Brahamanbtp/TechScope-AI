@@ -1,4 +1,9 @@
 (() => {
+  const status = document.querySelector('#offline-status');
+  const updateStatus = () => { if (status) status.textContent = navigator.onLine ? '' : 'Offline mode: showing cached content'; };
+  window.addEventListener('online', updateStatus);
+  window.addEventListener('offline', updateStatus);
+  updateStatus();
   const articles = [...document.querySelectorAll('article.card')];
   let index = 0;
   const focusArticle = () => articles[index]?.focus();

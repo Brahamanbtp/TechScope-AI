@@ -94,14 +94,13 @@ TechScope is being developed as an evidence-oriented technology intelligence pla
 - `scripts/calibrate_quality.py` writes human-review calibration data when production reviews exist.
 - `scripts/import_public_benchmark.py` imports public FEVER factuality data into a separate task dataset; it is not mixed with editorial-quality labels.
 - FEVER repository metadata was reachable, but its official data download URL was not verified in this environment; the importer therefore requires an explicit URL instead of using a false default.
+- SDK build automation is ready; local `python -m build sdk` requires installing the `build` package first.
 
 ## Remaining Priorities
 
-1. Collect enough independently labelled production data to calibrate the quality model.
-2. Add integration-specific credentials and delivery retry queues for notification services.
-3. Add distributed OpenTelemetry exporters and production metrics dashboards.
-4. Expand the PWA into complete offline article caching and mobile navigation.
-5. Publish the SDK to a package registry with release automation.
+1. Collect enough independently labelled production data to calibrate the quality model; reviewer tooling is ready, but the current database has no production articles yet.
+2. Provide real provider credentials and deploy the configured notification/observability services.
+3. Publish the SDK using the tagged release workflow after configuring package-registry credentials.
 
 ## Handoff Commands
 

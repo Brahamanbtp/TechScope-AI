@@ -1,0 +1,22 @@
+name: SDK Release
+
+on:
+  push:
+    tags: ["sdk-v*"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install build
+      - run: python -m build sdk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: techscope-source-sdk
+          path: sdk/dist/*

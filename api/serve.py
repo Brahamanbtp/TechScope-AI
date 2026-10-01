@@ -7,7 +7,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 import uvicorn
 import logging
 
-from utils.observability import configure_logging
+from utils.observability import configure_logging, configure_tracing
 
 # --------------------------
 # Ensure project root is in sys.path
@@ -60,9 +60,12 @@ configure_logging()
 request_metrics = {"total": 0, "errors": 0}
 try:
     from prometheus_client import Counter
+    from prometheus_client import Histogram
     http_requests = Counter("techscope_http_requests_total", "HTTP requests", ["method", "path", "status"])
+    http_latency = Histogram("techscope_http_request_duration_seconds", "HTTP request duration", ["method", "path"])
 except ImportError:
     http_requests = None
+    http_latency = None
 
 allowed_hosts = os.getenv("TECHSCOPE_ALLOWED_HOSTS", "localhost,127.0.0.1,testserver").split(",")
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
@@ -70,10 +73,14 @@ app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
 
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
+    import time
+    started = time.perf_counter()
     request_metrics["total"] += 1
     response = await call_next(request)
     if http_requests is not None:
         http_requests.labels(request.method, request.url.path, str(response.status_code)).inc()
+    if http_latency is not None:
+        http_latency.labels(request.method, request.url.path).observe(time.perf_counter() - started)
     if response.status_code >= 500:
         request_metrics["errors"] += 1
     response.headers["X-Content-Type-Options"] = "nosniff"
@@ -94,6 +101,7 @@ try:
     FastAPIInstrumentor.instrument_app(app)
 except ImportError:
     pass
+configure_tracing(app)
 
 # --------------------------
 # Pydantic input model
