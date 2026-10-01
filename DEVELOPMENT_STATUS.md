@@ -87,6 +87,7 @@ TechScope is being developed as an evidence-oriented technology intelligence pla
 - Without Redis, local development uses a thread executor fallback.
 - PostgreSQL support is wired and represented in Compose, but a live PostgreSQL integration test still needs to be run.
 - The quality model must not be described as factuality or source reliability.
+- A live Verge feed run produced 10 current articles and `data/review_batch.jsonl` is ready for independent labelling.
 - SQL `LIKE` search and TF-IDF semantic search are both available.
 - The dashboard is functional but still minimal.
 - Webhook subscriptions, provider payloads, retries/dead-letter delivery, PWA shell, CI, tooling, structured logs, and request metrics are implemented; full distributed tracing remains.
@@ -98,7 +99,7 @@ TechScope is being developed as an evidence-oriented technology intelligence pla
 
 ## Remaining Priorities
 
-1. Collect enough independently labelled production data to calibrate the quality model; reviewer tooling is ready, but the current database has no production articles yet.
+1. Collect independent labels for the current `data/review_batch.jsonl` batch, then repeat across multiple sources and reviewers.
 2. Provide real provider credentials and deploy the configured notification/observability services.
 3. Publish the SDK using the tagged release workflow after configuring package-registry credentials.
 

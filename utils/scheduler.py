@@ -54,7 +54,7 @@ def due_feed_urls() -> list[str]:
 
 def filter_duplicates(articles: List[Dict]) -> List[Dict]:
     """Remove duplicate articles based on semantic similarity."""
-    contents = [article["summary"] for article in articles]
+    contents = [article.get("content") or article.get("summary", "") for article in articles]
     duplicates = detect_similar_articles(contents)
 
     unique_indices = set(range(len(articles)))
