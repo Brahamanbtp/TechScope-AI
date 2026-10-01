@@ -92,6 +92,8 @@ TechScope is being developed as an evidence-oriented technology intelligence pla
 - Webhook subscriptions, provider payloads, retries/dead-letter delivery, PWA shell, CI, tooling, structured logs, and request metrics are implemented; full distributed tracing remains.
 - `scripts/benchmark_quality.py` writes `data/quality_benchmark.json`.
 - `scripts/calibrate_quality.py` writes human-review calibration data when production reviews exist.
+- `scripts/import_public_benchmark.py` imports public FEVER factuality data into a separate task dataset; it is not mixed with editorial-quality labels.
+- FEVER repository metadata was reachable, but its official data download URL was not verified in this environment; the importer therefore requires an explicit URL instead of using a false default.
 
 ## Remaining Priorities
 

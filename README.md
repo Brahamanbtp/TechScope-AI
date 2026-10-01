@@ -129,6 +129,16 @@ python -m utils.evaluate_quality
 
 The score is a content-quality signal, not a factuality or source-trust claim.
 
+For public factuality research data, use the FEVER importer:
+
+```bash
+python scripts/import_public_benchmark.py --url '<verified-public-jsonl-url>' --limit 1000
+```
+
+FEVER labels remain in `data/public_factuality_benchmark.jsonl` and are not
+converted into TechScope quality labels. FEVER is a factual-verification task,
+not an editorial-quality dataset.
+
 Article analyses also retain explicit attribution sentences and linked URLs as
 evidence records. Evidence extraction identifies possible support; it does not
 verify that a claim is true.
